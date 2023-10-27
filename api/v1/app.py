@@ -9,9 +9,9 @@ app = Flask(__name__)
 app.register_blueprint(app_views)
 
 
-
 @app.teardown_appcontext
 def closer(err):
+    """Closes storage session"""
     storage.close()
 
 

@@ -53,7 +53,7 @@ def create_place(city_id):
     city = storage.get('City', city_id)
     if city is None:
         abort(404)
-    place = Place(city_id=city.id, user_id=user.id, **request.get_json())
+    place = Place(city_id=city.id, **request.get_json())
     place.save()
     return jsonify(place.to_dict()), 201
 

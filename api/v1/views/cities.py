@@ -4,6 +4,7 @@ from api.v1.views import app_views
 from flask import jsonify, abort, request
 from models import storage
 from models.state import State
+from models.city import City
 
 
 @app_views.route('/cities', methods=['GET'])
@@ -65,7 +66,6 @@ def post_city(state_id):
         abort(400, 'Not a JSON')
         if 'name' not in request.get_json():
             abort(400, 'Missing name')
-        new_city = City(**request.get_json())
-        new_city.state_id = state.id
+        new_city = City(state_id=state.id, **request.get_json())
         new_city.save()
         return jsonify(new_city.to_dict()), 201

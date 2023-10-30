@@ -84,52 +84,50 @@ def places_search():
     if headers != 'application/json':
         abort(400, 'Not a JSON')
 
-    data = request.get_json()
+    if not request.get_json():
+        return jsonify([places.to_dict() for
+                        places in storage.all('Place').values()])
 
-    if not data:
-        return jsonify([
-            place.to_dict() for place in storage.all('Place').values()
-        ])
-
-    states = []
-    cities = []
-    amenities = []
+    res = []
     places = []
+    amenities = []
+    obj = request.get_json()
 
-    # Get all cities from states if 'states' are passed in the request
-    if data.get('states'):
-        for state_id in data.get('states'):
-            state = storage.get('State', state_id)
-            if state:
-                for city in state.cities:
-                    cities.append(city.id)
+    #get all cities from states if states passed
+    for k, v in obj.items():
+        if k == 'states':
+            for item in v:
+                state_obj = storage.get('State', item)
+                for city in state_obj.cities:
+                    res.append(city.id)
+    #add cities to existing cities list after looking through states
+    for k, v in obj.items():
+        if k == 'cities':
+            for item in v:
+                if item not in res:
+                    res.append(item)
 
-    # Add cities to the existing 'cities' list after looking through states
-    if data.get('cities'):
-        for city_id in data.get('cities'):
-            if city_id not in cities:
-                cities.append(city_id)
+    #create amenities list if amenities passed
+    for k, v in obj.items():
+        if k == 'amenities':
+            for item in v:
+                if item not in res:
+                    amenities.append(item)
 
-    # Create an amenities list if 'amenities' are passed
-    if data.get('amenities'):
-        for amenity_id in data.get('amenities'):
-            if amenity_id not in cities:
-                amenities.append(amenity_id)
-
-    # Create a list of place IDs from all cities
+    #create list of place id's from all cities
     for place in storage.all('Place').values():
-        if place.city_id in cities:
+        if place.city_id in res:
             places.append(place.id)
 
-    # If 'places' is empty and 'amenities' is not empty
-    if not places and amenities:
+    #if places is empty and amenities is not empty
+    if places == [] and amenities != []:
         remove = []
         res = []
         places = [place.id for place in storage.all('Place').values()]
         for place in places:
-            get_place = storage.get('Place', place)
-            for amenity in get_place.amenities:
-                if amenity.id not in amenities:
+            obj = storage.get('Place', place)
+            for amen in obj.amenities:
+                if amen.id not in amenities:
                     if place not in remove:
                         remove.append(place)
         for place in places:
@@ -138,19 +136,11 @@ def places_search():
         return jsonify([storage.get('Place', obj).to_dict()
                         for obj in res])
 
-    # Filter places based on amenities
-    if amenities:
-        for place_id in places.copy():
-            get_place = storage.get('Place', place_id)
+    if amenities != []:
+        for place in places:
+            obj = storage.get('Place', place)
             for amenity in amenities:
-                if amenity not in get_place.amenities:
-                    places.remove(place_id)
-    # if amenities:
-    #     amenities_obj = [storage.get(Amenity, amenity_id)
-    #                      for amenity_id in amenities]
-    #     places = [place for place in places if all(
-    #         amenity in place.amenities for amenity in amenities_obj)]
+                if amenity not in obj.amenities:
+                    places.remove(place)
 
-    return jsonify([
-        storage.get('Place', place_id).to_dict() for place_id in places
-    ])
+    return jsonify([storage.get('Place', id).to_dict() for id in places])
